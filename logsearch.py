@@ -20,6 +20,8 @@ from xml.dom import minidom
 from datetime import datetime
 import optparse
 import re
+import ekg
+import string
 
 cred = "\033[01;31m"
 cgreen = "\033[01;32m"
@@ -29,197 +31,221 @@ cmagenta = "\033[01;35m"
 ccyan = "\033[01;36m"
 cwhite = "\033[01;37m"
 
-curtime = datetime.now()
-
-optparser = optparse.OptionParser()
-optparser.add_option("-f", dest="filename", help="nayzwa pliku", metavar="FILE")
-optparser.add_option("-d", dest="date", help="tylko ten dzien(wyklucza --db i --de)", default="all")
-optparser.add_option("--db", dest="datebg", help="od tego dnia", default="all")
-optparser.add_option("--de", dest="dateend", help="do tego dnia", default="all")
-optparser.add_option("--tb", dest="timebg", help="od tej godziny", default="all")
-optparser.add_option("--te", dest="timeend", help="do tej godziny", default="all")
-optparser.add_option("--tfa", dest="timeforall", help="ograniczenie od-do dla czasu bedzie dla wszystkich dni z zakresu", action="store_true")
-optparser.add_option("-s", dest="search", help="szukanie bez rozrozniania wielkosci liter", metavar="SEARCH STRING")
-optparser.add_option("-S", dest="search2", help="szukanie z rozroznianiem wielkosci liter", metavar="SEARCH STRING")
-(opts, args) = optparser.parse_args()
-
-if not (opts.filename):
-    print "Musisz podac plik\n"
-    exit()
-
-if(opts.date != "all"):
-    r = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}")
-    if not (r.match(opts.date)):
-        print "Bledny format daty. Format: YYYY-MM-DD"
-        exit()
-    year = int(opts.date[0:4])
-    month = int(opts.date[5:7])
-    day = int(opts.date[8:10])
-    if(year > int(curtime.year)):
-        print "Bledny rok"
-        exit()
-    elif(month > int(curtime.month) and (month > 12 or month <= 0)):
-        print "Bledny miesiac"
-        exit()
-    elif(day > int(curtime.day) and (day > 31 or day <= 0)):
-        print "Bledny dzien"
-        exit()
-    opts.datebg = "all"
-    opts.dateend = "all"
-else:
-    if(opts.datebg != "all"):
+def search(name, args):
+    args = args.split(" ")
+    date = "all"
+    datebg = "all"
+    dateend = "all"
+    timebg = "all"
+    timeend = "all"
+    timeforall = 0
+    search = ""
+    search2 = ""
+    curtime = datetime.now()
+    filename = str(ekg.window_current())
+    for x in range(len(args)-1):
+        if args[x] == "-d":
+            date = args[x+1]
+            x += 1
+        elif args[x] == "-db":
+            datebg = args[x+1]
+            x += 1
+        elif args[x] == "-de":
+            dateend = args[x+1]
+            x += 1
+        elif args[x] == "-tb":
+            timebg = args[x+1]
+            x += 1
+        elif args[x] == "-te":
+            timeend = args[x+1]
+            x += 1
+        elif args[x] == "-tfa":
+            timeforall = 1
+        elif args[x] == "-f":
+            filename = args[x+1]
+            x += 1
+        elif args[x] == "-s":
+            search = string.join(args[x+1:], " ")
+            x = len(args)
+    filename = "<PELNA SCIEZKA DOSTEPU DO PLIKU <log>.xml>"
+    if(date != "all"):
         r = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}")
-        if not (r.match(opts.datebg)):
-            print "Bledny format daty. Format: YYYY-MM-DD"
-            exit()
-        yearbg = int(opts.datebg[0:4])
-        monthbg = int(opts.datebg[5:7])
-        daybg = int(opts.datebg[8:10])
-        if(yearbg > int(curtime.year)):
-            print "Bledny rok"
-            exit()
-        elif(monthbg > int(curtime.month) and (monthbg > 12 or monthbg <= 0)):
-            print "Bledny miesiac"
-            exit()
-        elif(daybg > int(curtime.day) and (daybg > 31 or daybg <= 0)):
-            print "Bledny dzien"
-            exit()
-    if(opts.dateend != "all"):
-        r = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}")
-        if not (r.match(opts.dateend)):
-            print "Bledny format daty. Format: YYYY-MM-DD"
-            exit()
-        yearend = int(opts.dateend[0:4])
-        monthend = int(opts.dateend[5:7])
-        dayend = int(opts.dateend[8:10])
-        if(yearend > int(curtime.year)):
-            print "Bledny rok"
-            exit()
-        elif(monthend > int(curtime.month) and (monthend > 12 or monthend <= 0)):
-            print "Bledny miesiac"
-            exit()
-        elif(dayend > int(curtime.day) and (dayend > 31 or dayend <= 0)):
-            print "Bledny dzien"
-            exit()
+        if not (r.match(date)):
+            ekg.echo("Bledny format daty. Format: YYYY-MM-DD")
+            return 0
+        year = int(date[0:4])
+        month = int(date[5:7])
+        day = int(date[8:10])
+        if(year > int(curtime.year)):
+            ekg.echo("Bledny rok")
+            return 0
+        elif(month > int(curtime.month) and (month > 12 or month <= 0)):
+            ekg.echo("Bledny miesiac")
+            return 0
+        elif(day > int(curtime.day) and (day > 31 or day <= 0)):
+            ekg.echo("Bledny dzien")
+            return 0
+        datebg = "all"
+        dateend = "all"
+    else:
+        if(datebg != "all"):
+            r = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}")
+            if not (r.match(datebg)):
+                ekg.echo("Bledny format daty. Format: YYYY-MM-DD")
+                return 0
+            yearbg = int(datebg[0:4])
+            monthbg = int(datebg[5:7])
+            daybg = int(datebg[8:10])
+            if(yearbg > int(curtime.year)):
+                ekg.echo("Bledny rok")
+                return 0
+            elif(monthbg > int(curtime.month) and (monthbg > 12 or monthbg <= 0)):
+                ekg.echo("Bledny miesiac")
+                return 0
+            elif(daybg > int(curtime.day) and (daybg > 31 or daybg <= 0)):
+                ekg.echo("Bledny dzien")
+                return 0
+        if(dateend != "all"):
+            r = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}")
+            if not (r.match(dateend)):
+                ekg.echo("Bledny format daty. Format: YYYY-MM-DD")
+                return 0
+            yearend = int(dateend[0:4])
+            monthend = int(dateend[5:7])
+            dayend = int(dateend[8:10])
+            if(yearend > int(curtime.year)):
+                ekg.echo("Bledny rok")
+                return 0
+            elif(monthend > int(curtime.month) and (monthend > 12 or monthend <= 0)):
+                ekg.echo("Bledny miesiac")
+                return 0
+            elif(dayend > int(curtime.day) and (dayend > 31 or dayend <= 0)):
+                ekg.echo("Bledny dzien")
+                return 0
+
+    if(timebg != "all"):
+        r = re.compile("[0-9]{2}:[0-9]{2}")
+        if not (r.match(timebg)):
+            ekg.echo("Bledny format czasu poczatkowego. Format: HH:MM")
+            return 0
+        hourbg = int(timebg[0:2])
+        minutebg = int(timebg[3:5])
+        if(hourbg < 0 or hourbg >= 24):
+            ekg.echo("Bledna godzina")
+            return 0
+        if(minutebg < 0 or minutebg >= 60):
+            ekg.echo("Bledne minuty")
+            return 0
+        if(date == "all" and datebg == "all"):
+            yearbg = int(curtime.year)
+            monthbg = int(curtime.month)
+            daybg = int(curtime.day)
+
+    if(timeend != "all"):
+        r = re.compile("[0-9]{2}:[0-9]{2}")
+        if not (r.match(timeend)):
+            ekg.echo("Bledny format czasu poczatkowego. Format: HH:MM")
+            return 0
+        hourend = int(timeend[0:2])
+        minuteend = int(timeend[3:5])
+        if(hourend < 0 or hourend >= 24):
+            ekg.echo("Bledna godzina")
+            return 0
+        if(minuteend < 0 or minuteend >= 60):
+            ekg.echo("Bledne minuty")
+            return 0
+        if(date == "all" and dateend == "all"):
+            yearend = int(curtime.year)
+            monthend = int(curtime.month)
+            dayend = int(curtime.day)
+
+    if search:
+        s = re.compile(search, re.IGNORECASE)
+
+    if search2:
+        s = re.compile(search2)
+
+    log = minidom.parse(filename)
+    log = log.getElementsByTagName('message')
+
+    tmpdate = ""
+    pdate = ""
+
+    strtoprint = ""
+
+    for i in range(0, log.length):
+        time = log[i].getElementsByTagName('received')
+        time = time[0].childNodes[0].nodeValue
+        time = datetime.fromtimestamp(float(time))
+        tmpdate = time.date()
+        time = time.time()
+        who = log[i].getElementsByTagName('nick')
+        who = who[0].childNodes[0].nodeValue
+        body = log[i].getElementsByTagName('body')
+        body = body[0].childNodes[0].nodeValue
+        if(date != "all"):
+            if year != tmpdate.year:
+                continue
+            if month != tmpdate.month:
+                continue
+            if day != tmpdate.day:
+                continue
+        if(datebg != "all"):
+            if yearbg > tmpdate.year:
+                continue
+            if yearbg == tmpdate.year and monthbg > tmpdate.month:
+                continue
+            if yearbg == tmpdate.year and monthbg == tmpdate.month and daybg > tmpdate.day:
+                continue
+        if(dateend != "all"):
+            if yearend < tmpdate.year:
+                continue
+            if yearend == tmpdate.year and monthend < tmpdate.month:
+                continue
+            if yearend == tmpdate.year and monthend == tmpdate.month and dayend < tmpdate.day:
+                continue
+        if(timebg != "all"):
+            if timeforall:
+                if int(hourbg) > int(time.hour):
+                    continue
+                if int(hourbg) == int(time.hour) and int(minutebg) > int(time.minute):
+                    continue
+            else:
+                if yearbg > tmpdate.year:
+                    continue
+                if yearbg == tmpdate.year and monthbg > tmpdate.month:
+                    continue
+                if yearbg == tmpdate.year and monthbg == tmpdate.month and daybg > tmpdate.day:
+                    continue
+                if yearbg == tmpdate.year and monthbg == tmpdate.month and daybg == tmpdate.day and int(hourbg) > int(time.hour):
+                    continue
+                if yearbg == tmpdate.year and monthbg == tmpdate.month and daybg == tmpdate.day and int(hourbg) == int(time.hour) and int(minutebg) > int(time.minute):
+                    continue
+        if(timeend != "all"):
+            if timeforall:
+                if int(hourend) < int(time.hour):
+                    continue
+                if int(hourend) == int(time.hour) and int(minuteend) < int(time.minute):
+                    continue
+            else:
+                if yearend < tmpdate.year:
+                    continue
+                if yearend == tmpdate.year and monthend < tmpdate.month:
+                    continue
+                if yearend == tmpdate.year and monthend == tmpdate.month and dayend < tmpdate.day:
+                    continue
+                if yearend == tmpdate.year and monthend == tmpdate.month and dayend == tmpdate.day and int(hourend) < int(time.hour):
+                    continue
+                if yearend == tmpdate.year and monthend == tmpdate.month and dayend == tmpdate.day and int(hourend) == int(time.hour) and int(minuteend) < int(time.minute):
+                    continue
+        if(search or search2):
+            if not s.findall(body):
+                continue
+        if(tmpdate != pdate):
+            strtoprint += cmagenta + str(tmpdate) + "\n"
+            pdate = tmpdate
+        strtoprint += cblue + "    " + str(time) + cgreen + " " + who + cwhite + " " + body[1:] + "\n"
+    ekg.echo(strtoprint)
 
 
-if(opts.timebg != "all"):
-    r = re.compile("[0-9]{2}:[0-9]{2}")
-    if not (r.match(opts.timebg)):
-        print "Bledny format czasu poczatkowego. Format: HH:MM"
-        exit()
-    hourbg = int(opts.timebg[0:2])
-    minutebg = int(opts.timebg[3:5])
-    if(hourbg < 0 or hourbg >= 24):
-        print "Bledna godzina"
-        exit()
-    if(minutebg < 0 or minutebg >= 60):
-        print "Bledne minuty"
-        exit()
-    if(opts.date == "all" and opts.datebg == "all"):
-        yearbg = int(curtime.year)
-        monthbg = int(curtime.month)
-        daybg = int(curtime.day)
-
-if(opts.timeend != "all"):
-    r = re.compile("[0-9]{2}:[0-9]{2}")
-    if not (r.match(opts.timeend)):
-        print "Bledny format czasu poczatkowego. Format: HH:MM"
-        exit()
-    hourend = int(opts.timeend[0:2])
-    minuteend = int(opts.timeend[3:5])
-    if(hourend < 0 or hourend >= 24):
-        print "Bledna godzina"
-        exit()
-    if(minuteend < 0 or minuteend >= 60):
-        print "Bledne minuty"
-        exit()
-    if(opts.date == "all" and opts.dateend == "all"):
-        yearend = int(curtime.year)
-        monthend = int(curtime.month)
-        dayend = int(curtime.day)
-
-if opts.search:
-    s = re.compile(opts.search, re.IGNORECASE)
-
-if opts.search2:
-    s = re.compile(opts.search2)
-
-log = minidom.parse(opts.filename)
-log = log.getElementsByTagName('message')
-
-date = ""
-pdate = ""
-
-for i in range(0, log.length):
-    time = log[i].getElementsByTagName('received')
-    time = time[0].childNodes[0].nodeValue
-    time = datetime.fromtimestamp(float(time))
-    date = time.date()
-    time = time.time()
-    who = log[i].getElementsByTagName('nick')
-    who = who[0].childNodes[0].nodeValue
-    body = log[i].getElementsByTagName('body')
-    body = body[0].childNodes[0].nodeValue
-    if(opts.date != "all"):
-        if year != date.year:
-            continue
-        if month != date.month:
-            continue
-        if day != date.day:
-            continue
-    if(opts.datebg != "all"):
-        if yearbg > date.year:
-            continue
-        if yearbg == date.year and monthbg > date.month:
-            continue
-        if yearbg == date.year and monthbg == date.month and daybg > date.day:
-            continue
-    if(opts.dateend != "all"):
-        if yearend < date.year:
-            continue
-        if yearend == date.year and monthend < date.month:
-            continue
-        if yearend == date.year and monthend == date.month and dayend < date.day:
-            continue
-    if(opts.timebg != "all"):
-        if opts.timeforall:
-            if int(hourbg) > int(time.hour):
-                continue
-            if int(hourbg) == int(time.hour) and int(minutebg) > int(time.minute):
-                continue
-        else:
-            if yearbg > date.year:
-                continue
-            if yearbg == date.year and monthbg > date.month:
-                continue
-            if yearbg == date.year and monthbg == date.month and daybg > date.day:
-                continue
-            if yearbg == date.year and monthbg == date.month and daybg == date.day and int(hourbg) > int(time.hour):
-                continue
-            if yearbg == date.year and monthbg == date.month and daybg == date.day and int(hourbg) == int(time.hour) and int(minutebg) > int(time.minute):
-                continue
-    if(opts.timeend != "all"):
-        if opts.timeforall:
-            if int(hourend) < int(time.hour):
-                continue
-            if int(hourend) == int(time.hour) and int(minuteend) < int(time.minute):
-                continue
-        else:
-            if yearend < date.year:
-                continue
-            if yearend == date.year and monthend < date.month:
-                continue
-            if yearend == date.year and monthend == date.month and dayend < date.day:
-                continue
-            if yearend == date.year and monthend == date.month and dayend == date.day and int(hourend) < int(time.hour):
-                continue
-            if yearend == date.year and monthend == date.month and dayend == date.day and int(hourend) == int(time.hour) and int(minuteend) < int(time.minute):
-                continue
-    if(opts.search or opts.search2):
-        if not s.findall(body):
-            continue
-    if(date != pdate):
-        print cmagenta + str(date)
-        pdate = date
-    print cblue + "    " + str(time) + cgreen + " " + who + cwhite + " " + body[1:]
+ekg.command_bind('logsearch', search)
