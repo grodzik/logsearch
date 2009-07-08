@@ -42,7 +42,7 @@ def search(name, args):
     search = ""
     search2 = ""
     curtime = datetime.now()
-    filename = str(ekg.window_current())
+    user = str(ekg.window_current())
     for x in range(len(args)-1):
         if args[x] == "-d":
             date = args[x+1]
@@ -61,27 +61,29 @@ def search(name, args):
             x += 1
         elif args[x] == "-tfa":
             timeforall = 1
-        elif args[x] == "-f":
-            filename = args[x+1]
+        elif args[x] == "-u":
+            user = args[x+1]
             x += 1
         elif args[x] == "-s":
             search = string.join(args[x+1:], " ")
             x = len(args)
     sessions = ekg.sessions()
-    filename = str.lower(filename)
+    user = str.lower(user)
     b = 0
     for x in sessions:
         for u in x.users():
-            if str.lower(str(u.nickname)) == filename or str.lower(str(u.uid)) == filename:
-                filename = "%s/%s.xml" % (str(x),u.uid)
+            if str.lower(str(u.nickname)) == user or str.lower(str(u.uid)) == user:
+                user = "/%s/%s.xml" % (str(x),u.uid)
                 b = 1
                 break
         if b == 1:
             break
     if b == 0:
         return 1
-    filename = os.environ["HOME"] + "/.ekg2/logs/" + filename
-    ekg.echo(filename)
+    if len(ekg.config['logsearch:logdir_path']):
+        user = ekg.config['logsearch:logdir_path'] + user
+    else:
+        user = os.environ["HOME"] + "/.ekg2/logs/" + user
     if(date != "all"):
         r = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}")
         if not (r.match(date)):
@@ -179,13 +181,13 @@ def search(name, args):
     if search2:
         s = re.compile(search2)
 
-    log = minidom.parse(filename)
+    log = minidom.parse(user)
     log = log.getElementsByTagName('message')
 
     tmpdate = ""
     pdate = ""
 
-    strtoprint = ""
+    strtoprint = "\n"
 
     for i in range(0, log.length):
         time = log[i].getElementsByTagName('received')
@@ -263,3 +265,4 @@ def search(name, args):
 
 
 ekg.command_bind('logsearch', search)
+ekg.variable_add('logsearch:logdir_path', os.environ["HOME"] + "/.ekg2/logs/")
