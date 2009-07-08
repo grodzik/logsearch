@@ -29,9 +29,29 @@ cyellow = "\033[01;33m"
 cblue = "\033[01;34m"
 cmagenta = "\033[01;35m"
 ccyan = "\033[01;36m"
-cwhite = "\033[01;37m"
+cwhite = "\033[00;37m"
+
+def help(name, args):
+    str =  "\n"
+    str += cgreen + "-u " + cwhite + "- nazwa uzytkownika, ktorego log przeszukac\n"
+    str += cgreen + "-d " + cwhite + "- tylko z tego dnia rozmowy beda przeszukane\n"
+    str += cgreen + "-db " + cwhite + "- poczatkowa data do przeszukiwania\n"
+    str += cgreen + "-de " + cwhite + "- koncowa data do przeszukiwania\n"
+    str += cgreen + "-tb " + cwhite + "- poczatkowy czas od ktorego rozpoczete bedzie przeszukiwanie\n"
+    str += cgreen + "-te " + cwhite + "- koncowy czas do ktorego bedzie przeszukiwanie\n"
+    str += cgreen + "-tfa " + cwhite + "- jesli nie podano zakresu dni, zmienna ta spowoduje, ze przeszukane zostana wszystkie dni\n"
+    str += cgreen + "-s " + cwhite + "- wykuszkiwanie bez rozrozniania wielkosci liter. wszystko po tym parametrze brane bedzie jako czesc wyrazenia wyszukiwanego. mozna uzywac skladni regexp\n"
+    str += cgreen + "-S " + cwhite + "- to samo co " + cgreen + "-s" + cwhite + ", lecz z rozroznianiem wielkosci liter\n"
+    ekg.echo(str)
 
 def search(name, args):
+    user = str(ekg.window_current())
+    if len(args) < 2:
+        ekg.echo("Za malo parametrow\n")
+        return 0
+    if len(args) < 4 and user == "__status":
+        ekg.echo("Za malo parametrow\n")
+        return 0
     args = args.split(" ")
     date = "all"
     datebg = "all"
@@ -42,7 +62,6 @@ def search(name, args):
     search = ""
     search2 = ""
     curtime = datetime.now()
-    user = str(ekg.window_current())
     for x in range(len(args)-1):
         if args[x] == "-d":
             date = args[x+1]
@@ -265,4 +284,5 @@ def search(name, args):
 
 
 ekg.command_bind('logsearch', search)
+ekg.command_bind('logsearch:help', help)
 ekg.variable_add('logsearch:logdir_path', os.environ["HOME"] + "/.ekg2/logs/")
