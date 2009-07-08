@@ -18,10 +18,10 @@
 
 from xml.dom import minidom
 from datetime import datetime
-import optparse
 import re
 import ekg
 import string
+import os
 
 cred = "\033[01;31m"
 cgreen = "\033[01;32m"
@@ -67,7 +67,22 @@ def search(name, args):
         elif args[x] == "-s":
             search = string.join(args[x+1:], " ")
             x = len(args)
-    filename = "<PELNA SCIEZKA DOSTEPU DO PLIKU <log>.xml>"
+    sessions = ekg.sessions()
+    filename = str.lower(filename)
+    b = 0
+    for x in sessions:
+        for u in x.users():
+            ekg.echo(str.lower(str(u.nickname)) + " " + filename)
+            if str.lower(str(u.nickname)) == filename or str.lower(str(u.uid)) == filename:
+                filename = "%s/%s.xml" % (str(x),u.uid)
+                b = 1
+                break
+        if b == 1:
+            break
+    if b == 0:
+        return 1
+    filename = os.environ["HOME"] + "/.ekg2/logs/" + filename
+    ekg.echo(filename)
     if(date != "all"):
         r = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}")
         if not (r.match(date)):
