@@ -72,7 +72,6 @@ def search(name, args):
     b = 0
     for x in sessions:
         for u in x.users():
-            ekg.echo(str.lower(str(u.nickname)) + " " + filename)
             if str.lower(str(u.nickname)) == filename or str.lower(str(u.uid)) == filename:
                 filename = "%s/%s.xml" % (str(x),u.uid)
                 b = 1
